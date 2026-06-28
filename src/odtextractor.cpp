@@ -326,10 +326,26 @@ QString OdtExtractor::buildStructuredText(const QString& xml)
     // 1. Normalize invisible Unicode characters to regular spaces
     text.replace(QRegularExpression("[​-‏‪-‮⁠﻿­ ]"), "");
 
-    // 2. For each table, extract structured rows using namespaced tags
-    // Process tables one at a time, extracting cells into "label | value" pairs
-    while (text.contains("<table:table ") || text.contains("<table:table>") || text.contains("</table:table>")) {
-        int tableStart = text.indexOf("<table:table");
+    // 2. For each table, extract structured rows using namespaced tags.
+    // Process tables one at a time, extracting cells into "label | value" pairs.
+    // Match only a real <table:table ...> open (next char is a space or '>') so the
+    // depth counter is not thrown off by <table:table-row/-cell/-column> children,
+    // which share the "<table:table" prefix. (Previously indexOf("<table:table")
+    // matched those children, so depth never returned to 0 and tableEnd stayed -1,
+    // silently falling back to flat, unstructured text.)
+    auto findTableOpen = [&text](int from) -> int {
+        int p = from;
+        for (;;) {
+            int idx = text.indexOf("<table:table", p);
+            if (idx == -1) return -1;
+            QChar next = (idx + 12 < text.length()) ? text.at(idx + 12) : QChar();
+            if (next == ' ' || next == '>') return idx;
+            p = idx + 12;
+        }
+    };
+
+    while (findTableOpen(0) != -1) {
+        int tableStart = findTableOpen(0);
         if (tableStart == -1) break;
 
         // Find the matching closing tag while tracking nesting depth so that
@@ -337,14 +353,14 @@ QString OdtExtractor::buildStructuredText(const QString& xml)
         int tableEnd = -1;
         {
             int depth = 1;
-            int searchPos = tableStart + 13; // skip past "<table:table"
+            int searchPos = tableStart + 12; // skip past "<table:table"
             while (searchPos < text.length() && depth > 0) {
-                int nextOpen  = text.indexOf("<table:table",  searchPos);
+                int nextOpen  = findTableOpen(searchPos);
                 int nextClose = text.indexOf("</table:table>", searchPos);
                 if (nextClose == -1) break;
                 if (nextOpen != -1 && nextOpen < nextClose) {
                     depth++;
-                    searchPos = nextOpen + 13;
+                    searchPos = nextOpen + 12;
                 } else {
                     depth--;
                     if (depth == 0) tableEnd = nextClose;
