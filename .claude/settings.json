@@ -1,0 +1,18 @@
+{
+    "permissions": {
+        "allow": [
+            "Bash(grep -r)",
+            "Bash(grep -l)",
+            "Bash(rg)",
+            "Bash(cat)",
+            "Bash(find)",
+            "Bash(head)",
+            "Bash(tail)",
+            "Bash(git status)",
+            "Bash(git diff)",
+            "Bash(git log)",
+            "Bash(ls)",
+            "Bash(ls -la)"
+        ]
+    }
+}

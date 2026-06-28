@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+debug/
+release/
+object_script.*
+
+# Qt Creator
+*.user
+*.pro.user*
+
+# Logs
+*.log
+
+# Output files
+Output/
+
+# Python cache
+__pycache__/
+*.pyc

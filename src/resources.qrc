@@ -1,0 +1,25 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/styles">
+    <file alias="stylesheet.qss">styles/stylesheet.qss</file>
+    <file alias="stylesheet-light.qss">styles/stylesheet-light.qss</file>
+</qresource>
+<qresource prefix="/icons">
+    <file alias="checksum.ico">resources/icons/checksum.ico</file>
+    <file alias="AI.ico">resources/icons/AI.ico</file>
+    <file alias="export.ico">resources/icons/export.ico</file>
+    <file alias="reset.ico">resources/icons/reset.ico</file>
+    <file alias="import.svg">resources/icons/import.svg</file>
+    <file alias="verify.svg">resources/icons/verify.svg</file>
+    <file alias="browse.svg">resources/icons/browse.svg</file>
+    <file alias="save.svg">resources/icons/save.svg</file>
+    <file alias="success.svg">resources/icons/success.svg</file>
+    <file alias="error.svg">resources/icons/error.svg</file>
+    <file alias="warning.svg">resources/icons/warning.svg</file>
+    <file alias="export.svg">resources/icons/export.svg</file>
+    <file alias="settings.svg">resources/icons/settings.svg</file>
+    <file alias="hash.svg">resources/icons/hash.svg</file>
+    <file alias="refresh.svg">resources/icons/refresh.svg</file>
+    <file alias="dashboard.svg">resources/icons/dashboard.svg</file>
+    <file alias="AI.svg">resources/icons/AI.svg</file>
+</qresource>
+</RCC>

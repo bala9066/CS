@@ -1,0 +1,5 @@
+CI Reference,Version,MD5,Document Link,Component
+DP-CRF-6648-V1-VDD-ATE-1V00,1V00,a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4,E:\ofc\VDD_CI_Verification\VDD_CI_Verification\release\ChecksumHasher.exe,ATE
+DP-CRF-7001-V1-VDD-SRS-2V00,2V00,b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5,,SRS
+DP-CRF-8055-V1-VDD-SDD-1V00,1V00,c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6,,SDD
+DP-CRF-9002-V1-VDD-TEST-3V00,3V00,d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1,,TEST
