@@ -96,7 +96,7 @@ void AIConfigManager::setTemperature(double temp) {
 
 int AIConfigManager::getMaxTokens() const {
     QMutexLocker locker(&m_mutex);
-    return m_settings->value("maxTokens", 4096).toInt();
+    return m_settings->value("maxTokens", 8192).toInt();
 }
 
 void AIConfigManager::setMaxTokens(int limit) {

@@ -2690,12 +2690,18 @@ void MainWindow::onGeneratePdfClicked() {
 QList<VddRecord> MainWindow::parseLLMJsonResponse(const QString& jsonString) {
     QList<VddRecord> records;
 
-    // Trim and clean the response (remove possible markdown code fences)
+    // Strip markdown code fences (handles ```json, ```JSON, plain ```, etc.)
     QString cleaned = jsonString.trimmed();
     if (cleaned.startsWith("```")) {
-        int endMark = cleaned.indexOf("```", 3);
-        if (endMark != -1) {
-            cleaned = cleaned.mid(3, endMark - 3);
+        int firstNewline = cleaned.indexOf('\n');
+        if (firstNewline != -1) {
+            cleaned = cleaned.mid(firstNewline + 1);
+        } else {
+            cleaned = cleaned.mid(3);
+        }
+        int lastFence = cleaned.lastIndexOf("```");
+        if (lastFence != -1) {
+            cleaned = cleaned.left(lastFence);
         }
     }
     cleaned = cleaned.trimmed();
@@ -2703,11 +2709,52 @@ QList<VddRecord> MainWindow::parseLLMJsonResponse(const QString& jsonString) {
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(cleaned.toUtf8(), &error);
     if (error.error != QJsonParseError::NoError) {
+        // Fallback 1: extract JSON array from anywhere in the raw response (handles leading text)
+        int startBracket = jsonString.indexOf('[');
+        int endBracket = jsonString.lastIndexOf(']');
+        if (startBracket != -1 && endBracket > startBracket) {
+            cleaned = jsonString.mid(startBracket, endBracket - startBracket + 1);
+            doc = QJsonDocument::fromJson(cleaned.toUtf8(), &error);
+        }
+    }
+    if (error.error != QJsonParseError::NoError) {
+        // Fallback 2: recover truncated JSON array — LLM output cut off mid-array by max_tokens limit.
+        // Find the last complete JSON object boundary (last '}') and close the array.
+        int arrayStart = cleaned.indexOf('[');
+        if (arrayStart == -1) arrayStart = jsonString.indexOf('[');
+        QString candidate = (arrayStart != -1) ? jsonString.mid(arrayStart) : cleaned;
+        int lastBrace = candidate.lastIndexOf('}');
+        if (lastBrace != -1) {
+            QString repaired = candidate.left(lastBrace + 1) + "]";
+            QJsonParseError repairErr;
+            QJsonDocument repairDoc = QJsonDocument::fromJson(repaired.toUtf8(), &repairErr);
+            if (repairErr.error == QJsonParseError::NoError && repairDoc.isArray()) {
+                doc = repairDoc;
+                error = repairErr;
+                logMessage("parseLLMJsonResponse: recovered truncated JSON (max_tokens limit hit — increase token limit in Settings)", "warn");
+            }
+        }
+    }
+    if (error.error != QJsonParseError::NoError) {
+        logMessage("parseLLMJsonResponse: JSON parse failed: " + error.errorString(), "error");
         return records;
     }
 
     if (!doc.isArray()) {
-        return records;
+        // Fallback: unwrap object-wrapped arrays e.g. {"items": [...]}
+        if (doc.isObject()) {
+            QJsonObject obj = doc.object();
+            for (const QString& key : obj.keys()) {
+                if (obj[key].isArray()) {
+                    doc = QJsonDocument(obj[key].toArray());
+                    break;
+                }
+            }
+        }
+        if (!doc.isArray()) {
+            logMessage("parseLLMJsonResponse: response is not a JSON array", "error");
+            return records;
+        }
     }
 
     int incId = m_llmImportTargetId;
@@ -2790,11 +2837,18 @@ QList<VddRecord> MainWindow::parseLLMJsonResponse(const QString& jsonString) {
 QList<QMap<QString, QString>> MainWindow::parseLLMFileResponse(const QString& jsonString) {
     QList<QMap<QString, QString>> items;
 
+    // Strip markdown code fences (handles ```json, ```JSON, plain ```, etc.)
     QString cleaned = jsonString.trimmed();
     if (cleaned.startsWith("```")) {
-        int endMark = cleaned.indexOf("```", 3);
-        if (endMark != -1) {
-            cleaned = cleaned.mid(3, endMark - 3);
+        int firstNewline = cleaned.indexOf('\n');
+        if (firstNewline != -1) {
+            cleaned = cleaned.mid(firstNewline + 1);
+        } else {
+            cleaned = cleaned.mid(3);
+        }
+        int lastFence = cleaned.lastIndexOf("```");
+        if (lastFence != -1) {
+            cleaned = cleaned.left(lastFence);
         }
     }
     cleaned = cleaned.trimmed();
@@ -2802,11 +2856,47 @@ QList<QMap<QString, QString>> MainWindow::parseLLMFileResponse(const QString& js
     QJsonParseError error;
     QJsonDocument doc = QJsonDocument::fromJson(cleaned.toUtf8(), &error);
     if (error.error != QJsonParseError::NoError) {
-        return items;
+        // Fallback 1: extract JSON array from anywhere in the raw response
+        int startBracket = jsonString.indexOf('[');
+        int endBracket = jsonString.lastIndexOf(']');
+        if (startBracket != -1 && endBracket > startBracket) {
+            cleaned = jsonString.mid(startBracket, endBracket - startBracket + 1);
+            doc = QJsonDocument::fromJson(cleaned.toUtf8(), &error);
+        }
+    }
+    if (error.error != QJsonParseError::NoError) {
+        // Fallback 2: recover truncated JSON array
+        int arrayStart = jsonString.indexOf('[');
+        QString candidate = (arrayStart != -1) ? jsonString.mid(arrayStart) : cleaned;
+        int lastBrace = candidate.lastIndexOf('}');
+        if (lastBrace != -1) {
+            QString repaired = candidate.left(lastBrace + 1) + "]";
+            QJsonParseError repairErr;
+            QJsonDocument repairDoc = QJsonDocument::fromJson(repaired.toUtf8(), &repairErr);
+            if (repairErr.error == QJsonParseError::NoError && repairDoc.isArray()) {
+                doc = repairDoc;
+                error = repairErr;
+            }
+        }
+        if (error.error != QJsonParseError::NoError) {
+            return items;
+        }
     }
 
     if (!doc.isArray()) {
-        return items;
+        // Fallback: unwrap object-wrapped arrays e.g. {"items": [...]}
+        if (doc.isObject()) {
+            QJsonObject obj = doc.object();
+            for (const QString& key : obj.keys()) {
+                if (obj[key].isArray()) {
+                    doc = QJsonDocument(obj[key].toArray());
+                    break;
+                }
+            }
+        }
+        if (!doc.isArray()) {
+            return items;
+        }
     }
 
     for (const QJsonValue& val : doc.array()) {
